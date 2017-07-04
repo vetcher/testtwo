@@ -22,6 +22,9 @@ func init() {
 		panic(err)
 	}
 	defer db.Close()
+}
+
+func handlerfunc() {
 
 }
 
