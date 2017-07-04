@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/jinzhu/gorm"
-	"github.com/graphql-go/graphql"
+	gql "github.com/graphql-go/graphql"
 )
 
 type User struct {
@@ -12,16 +12,49 @@ type User struct {
 	Banned bool `json:"banned"`
 }
 
-func (u *User) GraphqlFields()graphql.Fields {
-	return graphql.Fields{
-		"login": &graphql.Field{
-			Type: graphql.String,
+var userType = gql.NewObject(
+	gql.ObjectConfig{
+		Name: "User",
+		Fields: gql.Fields{
+			"login": &gql.Field{
+				Type: gql.String,
+			},
+			"password": &gql.Field{
+				Type: gql.String,
+			},
+			"banned": &gql.Field{
+				Type: gql.Boolean,
+			},
 		},
-		"password": &graphql.Field{
-			Type: graphql.String,
+	},
+)
+
+var queryType = gql.NewObject(
+	gql.ObjectConfig{
+		Name: "Query",
+		Fields: gql.Fields{
+			"user": &gql.Field{
+				Type: userType,
+				Args: gql.FieldConfigArgument{
+					"id": &gql.ArgumentConfig{
+						Type: gql.ID,
+					},
+				},
+				Resolve: resolverFunc,
+			},
 		},
-		"banned": &graphql.Field{
-			Type: graphql.Boolean,
-		},
+	},
+)
+
+func SelectUser(id int) (*User, error) {
+	var u User
+	if err := db.Where("id = ?", id).First(&u); err != nil {
+		return nil, err.Error
 	}
+	return &u, nil
+}
+
+func CreateUser(u *User) error {
+	
+	return nil
 }
