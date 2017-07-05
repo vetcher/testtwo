@@ -16,12 +16,7 @@ import (
 var getschema, _ = gql.NewSchema(
 	gql.SchemaConfig{
 		Query: queryType,
-	},
-)
-
-var postschema, _ = gql.NewSchema(
-	gql.SchemaConfig{
-		Query: queryType,
+		Mutation: userMutation,
 	},
 )
 
