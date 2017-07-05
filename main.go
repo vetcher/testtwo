@@ -4,19 +4,15 @@ import (
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
 	"fmt"
-	"encoding/json"
 	"net/http"
 	gql "github.com/graphql-go/graphql"
-	"github.com/graphql-go/graphql/gqlerrors"
-	"errors"
-	"io/ioutil"
-	"log"
+	"github.com/graphql-go/handler"
 )
 
-var getschema, _ = gql.NewSchema(
+var mainschema, _ = gql.NewSchema(
 	gql.SchemaConfig{
-		Query: queryType,
-		Mutation: userMutation,
+		Query:    QueryType,
+		Mutation: UserMutation,
 	},
 )
 
@@ -48,35 +44,11 @@ func init() {
 	db.AutoMigrate(&User{})
 }
 
-func handlerfunc(w http.ResponseWriter, r *http.Request) {
-	if r.Method == "GET" {
-		response := gql.Do(gql.Params{
-			Schema:        getschema,
-			RequestString: r.URL.Query()["query"][0],
-		})
-		json.NewEncoder(w).Encode(response)
-	} else if r.Method == "POST" {
-		// TODO
-		body, err := ioutil.ReadAll(r.Body)
-		if err != nil {
-			log.Println(err)
-		} else {
-			response := gql.Do(gql.Params{
-				Schema:        postschema,
-				RequestString: string(body),
-			})
-			json.NewEncoder(w).Encode(response)
-		}
-	} else {
-		json.NewEncoder(w).Encode(
-			gqlerrors.FormatError(
-				errors.New("Wrong method, only GET and POST supported"),
-		))
-	}
-}
-
 func main() {
-	http.HandleFunc("/graphql", handlerfunc)
+	h := handler.New(&handler.Config{
+		Schema: &mainschema,
+		Pretty: true,
+	})
 	defer db.Close()
-	http.ListenAndServe(":8080", nil)
+	http.ListenAndServe(":8080", h)
 }

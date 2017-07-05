@@ -32,7 +32,7 @@ var userType = gql.NewObject(
 	},
 )
 
-var queryType = gql.NewObject(
+var QueryType = gql.NewObject(
 	gql.ObjectConfig{
 		Name: "Query",
 		Fields: gql.Fields{
@@ -58,7 +58,7 @@ var gqlreturnedId = gql.NewObject(gql.ObjectConfig{
 	},
 })
 
-var userMutation = gql.NewObject(gql.ObjectConfig{
+var UserMutation = gql.NewObject(gql.ObjectConfig{
 	Name: "User Mutation",
 	Fields: gql.Fields{
 		"createUser": &gql.Field{
