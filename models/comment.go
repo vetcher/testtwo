@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strconv"
 
+	"log"
+
 	gql "github.com/graphql-go/graphql"
 	"github.com/jinzhu/gorm"
 )
@@ -31,6 +33,65 @@ func init() {
 		Type:        userType,
 		Description: "Author of this comment",
 	})
+}
+
+type CommentMutationResponse struct {
+	Id uint `json:"id"`
+}
+
+func resolvePostComment(p gql.ResolveParams) (interface{}, error) {
+	db := p.Context.Value("Database")
+	if db == nil {
+		panic(errors.New("Can't find `Database` in context"))
+	}
+	log.Println("OK")
+	l := p.Args["login"]
+	u, err := SelectUserByLogin(db.(*gorm.DB), l.(string))
+	if err != nil {
+		return nil, fmt.Errorf("can't find user becuse of: %v", err)
+	}
+	text := p.Args["text"]
+	c := Comment{
+		AuthorID: u.ID,
+		Text:     text.(string),
+	}
+	return PostComment(db.(*gorm.DB), &c)
+}
+
+func PostComment(db *gorm.DB, c *Comment) (*CommentMutationResponse, error) {
+	if err := db.Create(c); err.Error != nil {
+		return &CommentMutationResponse{0}, DBError(err.Error)
+	} else {
+		return &CommentMutationResponse{c.ID}, nil
+	}
+}
+
+func resolveDeleteComment(p gql.ResolveParams) (interface{}, error) {
+	db := p.Context.Value("Database")
+	if db == nil {
+		panic(errors.New("Can't find `Database` in context"))
+	}
+	idstr, ok := p.Args["id"].(string)
+	if !ok {
+		return nil, FieldNotFoundError("id")
+	}
+	id, err := strconv.ParseUint(idstr, 10, 64)
+	if err != nil {
+		return nil, fmt.Errorf("can't parse `%v` to uint", idstr)
+	}
+	return DeleteComment(db.(*gorm.DB), uint(id))
+}
+
+func DeleteComment(db *gorm.DB, id uint) (*CommentMutationResponse, error) {
+	var temp Comment
+	if err := db.Where("id = ?", id).First(&temp); err.Error != nil {
+		return &CommentMutationResponse{0}, DBError(err.Error)
+	} else {
+		if err := db.Delete(temp); err.Error != nil {
+			return &CommentMutationResponse{0}, DBError(err.Error)
+		}
+		return &CommentMutationResponse{id}, nil
+	}
 }
 
 func commentResolverSelect(p gql.ResolveParams) (interface{}, error) {

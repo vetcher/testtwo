@@ -7,6 +7,8 @@ import (
 	"log"
 	"net/http"
 
+	"time"
+
 	gql "github.com/graphql-go/graphql"
 	"github.com/graphql-go/handler"
 	"github.com/jinzhu/gorm"
@@ -59,7 +61,7 @@ func initHandler() *handler.Handler {
 	schema, err := gql.NewSchema(
 		gql.SchemaConfig{
 			Query:    m.QueryType,
-			Mutation: m.UserMutation,
+			Mutation: m.RootMutation,
 		},
 	)
 	if err != nil {
@@ -74,7 +76,9 @@ func initHandler() *handler.Handler {
 
 func contextHandlerFunc(ctx context.Context, h *handler.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		now := time.Now()
 		h.ContextHandler(ctx, w, r)
+		log.Println(r.URL.Path, time.Now().Sub(now))
 	})
 }
 

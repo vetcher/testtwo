@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"strconv"
 
+	"log"
+
 	gql "github.com/graphql-go/graphql"
 	"github.com/jinzhu/gorm"
 )
@@ -88,7 +90,7 @@ var QueryType = gql.NewObject(
 )
 
 var gqlReturnedID = gql.NewObject(gql.ObjectConfig{
-	Name: "UserId",
+	Name: "InstanceID",
 	Fields: gql.Fields{
 		"id": &gql.Field{
 			Type: gql.ID,
@@ -96,8 +98,22 @@ var gqlReturnedID = gql.NewObject(gql.ObjectConfig{
 	},
 })
 
-var UserMutation = gql.NewObject(gql.ObjectConfig{
-	Name: "UserMutation",
+/*var RootMutation = gql.NewObject(gql.ObjectConfig{
+	Name: "RootMutation",
+	Fields: gql.Fields{
+		"users": &gql.Field{
+			Type:        UserMutation,
+			Description: "Operations with User",
+		},
+		"comments": &gql.Field{
+			Type:        CommentMutation,
+			Description: "Operations with Comments",
+		},
+	},
+})*/
+
+var RootMutation = gql.NewObject(gql.ObjectConfig{
+	Name: "RootMutation",
 	Fields: gql.Fields{
 		"createUser": &gql.Field{
 			Type: gqlReturnedID,
@@ -125,6 +141,30 @@ var UserMutation = gql.NewObject(gql.ObjectConfig{
 				},
 			},
 			Resolve: resolverUpdate,
+		},
+		"postComment": &gql.Field{
+			Type: gqlReturnedID,
+			Args: gql.FieldConfigArgument{
+				"text": &gql.ArgumentConfig{
+					Type:        gql.String,
+					Description: "Message",
+				},
+				"login": &gql.ArgumentConfig{
+					Type:        gql.String,
+					Description: "Nickname (login) of author",
+				},
+			},
+			Resolve: resolvePostComment,
+		},
+		"deleteComment": &gql.Field{
+			Type: gqlReturnedID,
+			Args: gql.FieldConfigArgument{
+				"id": &gql.ArgumentConfig{
+					Type:        gql.ID,
+					Description: "ID of message, which should be deleted",
+				},
+			},
+			Resolve: resolveDeleteComment,
 		},
 	},
 })
@@ -163,15 +203,15 @@ func resolverUpdate(p gql.ResolveParams) (interface{}, error) {
 func resolverCreate(p gql.ResolveParams) (interface{}, error) {
 	db := p.Context.Value("Database")
 	if db == nil {
-		panic(errors.New("Can't find `Database`"))
+		panic(errors.New("Can't find `Database` in context"))
 	}
 	l, ok := p.Args["login"]
 	if !ok {
-		return nil, errors.New("I think its panic")
+		return nil, FieldNotFoundError("login")
 	}
 	pass, ok := p.Args["password"]
 	if !ok {
-		return nil, errors.New("I think its panic")
+		return nil, FieldNotFoundError("login")
 	}
 	usr := User{
 		Login:    l.(string),
@@ -191,6 +231,7 @@ func SelectUserByID(db *gorm.DB, id uint) (*User, error) {
 
 func SelectUserByLogin(db *gorm.DB, login string) (*User, error) {
 	var u User
+	log.Println(login)
 	if err := db.Where("login = ?", login).First(&u); err.Error != nil {
 		return nil, DBError(err.Error)
 	}
