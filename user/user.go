@@ -6,8 +6,8 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"errors"
-	"log"
 	"strconv"
+	"fmt"
 )
 
 var MainDb *gorm.DB
@@ -19,7 +19,7 @@ type User struct {
 	Banned bool `json:"-"`
 }
 
-type Answer struct {
+type UserMutationResponse struct {
 	Id uint `json:"id"`
 }
 
@@ -43,15 +43,14 @@ var userType = gql.NewObject(
 
 func resolverFunc(p gql.ResolveParams) (interface{}, error) {
 	idstr, ok := p.Args["id"]
-	log.Println("ID is", idstr)
 	if ok {
 		id, err := strconv.ParseUint(idstr.(string), 10, 64)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("Parsing `id` error: %v", err)
 		}
 		return SelectUser(uint(id))
 	}
-	return nil, nil
+	return nil, fmt.Errorf("Field `id` not found")
 }
 
 var QueryType = gql.NewObject(
@@ -71,7 +70,7 @@ var QueryType = gql.NewObject(
 	},
 )
 
-var gqlreturnedId = gql.NewObject(gql.ObjectConfig{
+var gqlReturnedID = gql.NewObject(gql.ObjectConfig{
 	Name: "UserId",
 	Fields: gql.Fields{
 		"id": &gql.Field{
@@ -84,7 +83,7 @@ var UserMutation = gql.NewObject(gql.ObjectConfig{
 	Name: "UserMutation",
 	Fields: gql.Fields{
 		"createUser": &gql.Field{
-			Type: gqlreturnedId,
+			Type: gqlReturnedID,
 			Args: gql.FieldConfigArgument{
 				"login": &gql.ArgumentConfig{
 					Type: gql.String,
@@ -93,25 +92,10 @@ var UserMutation = gql.NewObject(gql.ObjectConfig{
 					Type: gql.String,
 				},
 			},
-			Resolve: func(p gql.ResolveParams) (interface{}, error) {
-				l, ok := p.Args["login"]
-				if !ok {
-					return nil, errors.New("I think its panic 1")
-				}
-				pass, ok := p.Args["password"]
-				if !ok {
-					return nil, errors.New("I think its panic 2")
-				}
-				usr := User{
-					Login: l.(string),
-					Password: pass.(string),
-					Banned: false,
-				}
-				return CreateUser(&usr)
-			},
+			Resolve: resolverCreate,
 		},
 		"updateUser": &gql.Field{
-			Type: gqlreturnedId,
+			Type: gqlReturnedID,
 			Args: gql.FieldConfigArgument{
 				"login": &gql.ArgumentConfig{
 					Type: gql.String,
@@ -128,10 +112,14 @@ var UserMutation = gql.NewObject(gql.ObjectConfig{
 	},
 })
 
+func FieldNotFoundError(field string) error {
+	return fmt.Errorf("Field `%v` not found empty", field)
+}
+
 func resolverUpdate(p gql.ResolveParams) (interface{}, error) {
 	l, ok := p.Args["login"]
 	if !ok {
-		return nil, errors.New("Login is empty")
+		return nil, FieldNotFoundError("login")
 	}
 	usr, err := SelectUserByLogin(l.(string))
 	if err != nil {
@@ -139,22 +127,38 @@ func resolverUpdate(p gql.ResolveParams) (interface{}, error) {
 	}
 	pass, ok := p.Args["password"]
 	if !ok {
-		return nil, errors.New("I think its panic")
+		return nil, FieldNotFoundError("password")
 	}
 	ban, ok := p.Args["banned"]
-	//b, err := strconv.ParseBool(ban.(string))
-	if !ok || err != nil {
-		return nil, errors.New("I think its panic")
+	if !ok {
+		return nil, FieldNotFoundError("banned")
 	}
 	usr.Password = pass.(string)
 	usr.Banned = ban.(bool)
 	return UpdateUser(usr)
 }
 
+func resolverCreate(p gql.ResolveParams) (interface{}, error) {
+	l, ok := p.Args["login"]
+	if !ok {
+		return nil, errors.New("I think its panic")
+	}
+	pass, ok := p.Args["password"]
+	if !ok {
+		return nil, errors.New("I think its panic")
+	}
+	usr := User{
+		Login: l.(string),
+		Password: pass.(string),
+		Banned: false,
+	}
+	return CreateUser(&usr)
+}
+
 func SelectUser(id uint) (*User, error) {
 	var u User
 	if err := MainDb.Where("id = ?", id).First(&u); err.Error != nil {
-		return nil, err.Error
+		return nil, fmt.Errorf("Database error: %v", err.Error)
 	}
 	return &u, nil
 }
@@ -162,7 +166,7 @@ func SelectUser(id uint) (*User, error) {
 func SelectUserByLogin(login string) (*User, error) {
 	var u User
 	if err := MainDb.Where("login = ?", login).First(&u); err.Error != nil {
-		return nil, err.Error
+		return nil, fmt.Errorf("Database error: %v", err.Error)
 	}
 	return &u, nil
 }
@@ -173,20 +177,20 @@ func (u *User) EncryptPass() {
 	u.Password = hex.EncodeToString(h.Sum(nil))
 }
 
-func CreateUser(u *User) (Answer, error) {
+func CreateUser(u *User) (*UserMutationResponse, error) {
 	u.EncryptPass()
     if err := MainDb.Create(u); err.Error != nil {
-		return Answer{0}, err.Error
+		return &UserMutationResponse{0}, fmt.Errorf("Database error: %v", err.Error)
 	} else {
-		return Answer{u.ID}, nil
+		return &UserMutationResponse{u.ID}, nil
 	}
 }
 
-func UpdateUser(u *User) (Answer, error) {
+func UpdateUser(u *User) (*UserMutationResponse, error) {
 	u.EncryptPass()
 	if err := MainDb.Save(u); err.Error != nil {
-		return Answer{0}, err.Error
+		return &UserMutationResponse{0}, fmt.Errorf("Database error: %v", err.Error)
 	} else {
-		return Answer{u.ID}, nil
+		return &UserMutationResponse{u.ID}, nil
 	}
 }

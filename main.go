@@ -7,29 +7,42 @@ import (
 	"net/http"
 	gql "github.com/graphql-go/graphql"
 	"github.com/graphql-go/handler"
-	u "testtwo/user"
+	u "github.com/vetcher/testtwo/user"
 	"log"
+	"flag"
 )
 
-var mainschema, ttt = gql.NewSchema(
-	gql.SchemaConfig{
-		Query:    u.QueryType,
-		Mutation: u.UserMutation,
-	},
-)
+type DBConfig struct {
+	Host *string
+	User *string
+	DBName *string
+	Password *string
+	Port *uint
+}
+
+const POSTGRES string = "postgres"
+
+func parseDBConfig() *DBConfig {
+	conf := DBConfig{
+		User: flag.String("user", POSTGRES, "User"),
+		Password: flag.String("password", POSTGRES, "User's password"),
+		DBName: flag.String("db", POSTGRES, "Name of database"),
+		Port: flag.Uint("port", 5432, "Postgres port"),
+		Host: flag.String("host", POSTGRES, "Address of server"),
+	}
+	return &conf
+}
 
 func init() {
-	host := "localhost"
-	user := "postgres"
-	dbname := "omg_test"
-	password := "postgres"
+	conf := parseDBConfig()
 	var err error
 	u.MainDb, err = gorm.Open("postgres",
-		fmt.Sprintf("host=%s user=%s dbname=%s sslmode=disable password=%s",
-			host,
-			user,
-			dbname,
-			password,
+		fmt.Sprintf("host=%s port=%s user=%s dbname=%s sslmode=disable password=%s",
+			conf.Host,
+			conf.Port,
+			conf.User,
+			conf.DBName,
+			conf.Password,
 		))
 	if err != nil {
 		panic(err)
@@ -38,7 +51,15 @@ func init() {
 }
 
 func main() {
-	log.Println(ttt)
+	mainschema, err := gql.NewSchema(
+		gql.SchemaConfig{
+			Query:    u.QueryType,
+			Mutation: u.UserMutation,
+		},
+	)
+	if err != nil {
+		panic(err)
+	}
 	h := handler.New(&handler.Config{
 		Schema: &mainschema,
 		Pretty: true,
