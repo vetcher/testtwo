@@ -1,20 +1,22 @@
-package user
+package models
 
 import (
-	"github.com/jinzhu/gorm"
-	gql "github.com/graphql-go/graphql"
 	"crypto/sha1"
 	"encoding/hex"
 	"errors"
-	"strconv"
 	"fmt"
+	"strconv"
+
+	gql "github.com/graphql-go/graphql"
+	"github.com/jinzhu/gorm"
 )
 
 type User struct {
 	gorm.Model
-	Password string `json:"password"`
-	Login string `json:"login" gorm:"unique_index"`
-	Banned bool `json:"-"`
+	Password string     `json:"password"`
+	Login    string     `json:"login" gorm:"unique_index"`
+	Banned   bool       `json:"banned"`
+	Comments []*Comment `json:"comments" gorm:"ForeignKey:AuthorID"`
 }
 
 type UserMutationResponse struct {
@@ -34,15 +36,18 @@ var userType = gql.NewObject(
 			"banned": &gql.Field{
 				Type: gql.Boolean,
 			},
+			"comments": &gql.Field{
+				Type:    gql.NewList(commentType),
+				Resolve: resolveCommentsForUser,
+			},
 		},
 	},
 )
 
-
-func resolverSelect(p gql.ResolveParams) (interface{}, error) {
+func userResolverSelect(p gql.ResolveParams) (interface{}, error) {
 	db := p.Context.Value("Database")
 	if db == nil {
-		panic(errors.New("Can't find `Database`"))
+		panic(errors.New("Can't find `Database` in context"))
 	}
 	idstr, ok := p.Args["id"]
 	if ok {
@@ -51,8 +56,9 @@ func resolverSelect(p gql.ResolveParams) (interface{}, error) {
 			return nil, fmt.Errorf("Parsing `id` error: %v", err)
 		}
 		return SelectUserByID(db.(*gorm.DB), uint(id))
+	} else {
+		return nil, FieldNotFoundError("id")
 	}
-	return nil, fmt.Errorf("Field `id` not found")
 }
 
 var QueryType = gql.NewObject(
@@ -66,7 +72,16 @@ var QueryType = gql.NewObject(
 						Type: gql.ID,
 					},
 				},
-				Resolve: resolverSelect,
+				Resolve: userResolverSelect,
+			},
+			"comment": &gql.Field{
+				Type: commentType,
+				Args: gql.FieldConfigArgument{
+					"id": &gql.ArgumentConfig{
+						Type: gql.ID,
+					},
+				},
+				Resolve: commentResolverSelect,
 			},
 		},
 	},
@@ -121,7 +136,7 @@ func FieldNotFoundError(field string) error {
 func resolverUpdate(p gql.ResolveParams) (interface{}, error) {
 	db := p.Context.Value("Database")
 	if db == nil {
-		panic(errors.New("Can't find `Database`"))
+		panic(errors.New("Can't find `Database` in context"))
 	}
 	l, ok := p.Args["login"]
 	if !ok {
@@ -159,9 +174,9 @@ func resolverCreate(p gql.ResolveParams) (interface{}, error) {
 		return nil, errors.New("I think its panic")
 	}
 	usr := User{
-		Login: l.(string),
+		Login:    l.(string),
 		Password: pass.(string),
-		Banned: false,
+		Banned:   false,
 	}
 	return CreateUser(db.(*gorm.DB), &usr)
 }
@@ -169,7 +184,7 @@ func resolverCreate(p gql.ResolveParams) (interface{}, error) {
 func SelectUserByID(db *gorm.DB, id uint) (*User, error) {
 	var u User
 	if err := db.Where("id = ?", id).First(&u); err.Error != nil {
-		return nil, fmt.Errorf("Database error: %v", err.Error)
+		return nil, DBError(err.Error)
 	}
 	return &u, nil
 }
@@ -177,9 +192,13 @@ func SelectUserByID(db *gorm.DB, id uint) (*User, error) {
 func SelectUserByLogin(db *gorm.DB, login string) (*User, error) {
 	var u User
 	if err := db.Where("login = ?", login).First(&u); err.Error != nil {
-		return nil, fmt.Errorf("Database error: %v", err.Error)
+		return nil, DBError(err.Error)
 	}
 	return &u, nil
+}
+
+func DBError(err error) error {
+	return fmt.Errorf("Database error: %v", err)
 }
 
 func (u *User) EncryptPass() {
@@ -190,8 +209,8 @@ func (u *User) EncryptPass() {
 
 func CreateUser(db *gorm.DB, u *User) (*UserMutationResponse, error) {
 	u.EncryptPass()
-    if err := db.Create(u); err.Error != nil {
-		return &UserMutationResponse{0}, fmt.Errorf("Database error: %v", err.Error)
+	if err := db.Create(u); err.Error != nil {
+		return &UserMutationResponse{0}, DBError(err.Error)
 	} else {
 		return &UserMutationResponse{u.ID}, nil
 	}
@@ -200,7 +219,7 @@ func CreateUser(db *gorm.DB, u *User) (*UserMutationResponse, error) {
 func UpdateUser(db *gorm.DB, u *User) (*UserMutationResponse, error) {
 	u.EncryptPass()
 	if err := db.Save(u); err.Error != nil {
-		return &UserMutationResponse{0}, fmt.Errorf("Database error: %v", err.Error)
+		return &UserMutationResponse{0}, DBError(err.Error)
 	} else {
 		return &UserMutationResponse{u.ID}, nil
 	}

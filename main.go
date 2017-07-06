@@ -1,35 +1,36 @@
 package main
 
 import (
-	"github.com/jinzhu/gorm"
-	_ "github.com/jinzhu/gorm/dialects/postgres"
+	"context"
+	"flag"
 	"fmt"
+	"log"
 	"net/http"
+
 	gql "github.com/graphql-go/graphql"
 	"github.com/graphql-go/handler"
-	u "github.com/vetcher/testtwo/user"
-	"log"
-	"flag"
-	"context"
+	"github.com/jinzhu/gorm"
+	_ "github.com/jinzhu/gorm/dialects/postgres"
+	m "github.com/vetcher/testtwo/models"
 )
 
 const POSTGRES string = "postgres"
 
 type DBConfig struct {
-	Host *string
-	User *string
-	DBName *string
+	Host     *string
+	User     *string
+	DBName   *string
 	Password *string
-	Port *uint
+	Port     *uint
 }
 
 func parseDBConfig() *DBConfig {
 	conf := DBConfig{
-		User: flag.String("user", POSTGRES, "User"),
+		User:     flag.String("user", POSTGRES, "User"),
 		Password: flag.String("password", POSTGRES, "User's password"),
-		DBName: flag.String("db", POSTGRES, "Name of database"),
-		Port: flag.Uint("port", 5432, "Postgres port"),
-		Host: flag.String("host", "localhost", "Address of server"),
+		DBName:   flag.String("db", POSTGRES, "Name of database"),
+		Port:     flag.Uint("port", 5432, "Postgres port"),
+		Host:     flag.String("host", "localhost", "Address of server"),
 	}
 	flag.Parse()
 	return &conf
@@ -49,15 +50,16 @@ func initDB() *gorm.DB {
 		panic(err)
 	}
 	log.Println("Connection:", connectionParams)
-	db.AutoMigrate(&u.User{})
+	db.AutoMigrate(&m.User{})
+	db.AutoMigrate(&m.Comment{})
 	return db
 }
 
 func initHandler() *handler.Handler {
-	mainSchema, err := gql.NewSchema(
+	schema, err := gql.NewSchema(
 		gql.SchemaConfig{
-			Query:    u.QueryType,
-			Mutation: u.UserMutation,
+			Query:    m.QueryType,
+			Mutation: m.UserMutation,
 		},
 	)
 	if err != nil {
@@ -65,7 +67,7 @@ func initHandler() *handler.Handler {
 	}
 
 	return handler.New(&handler.Config{
-		Schema: &mainSchema,
+		Schema: &schema,
 		Pretty: true,
 	})
 }
@@ -82,6 +84,6 @@ func main() {
 	h := initHandler()
 	ctx := context.WithValue(context.Background(), "Database", db)
 	defer db.Close()
-	log.Println("Serve" )
+	log.Println("Serve")
 	http.ListenAndServe(":8080", contextHandlerFunc(ctx, h))
 }
