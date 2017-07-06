@@ -1,13 +1,6 @@
 package models
 
 import (
-	"errors"
-	"fmt"
-	"strconv"
-
-	"log"
-
-	gql "github.com/graphql-go/graphql"
 	"github.com/jinzhu/gorm"
 )
 
@@ -17,45 +10,8 @@ type Comment struct {
 	AuthorID uint   `gorm:"index" json:"author"`
 }
 
-var commentType = gql.NewObject(gql.ObjectConfig{
-	Name:        "Comment",
-	Description: "User's comment",
-	Fields: gql.Fields{
-		"text": &gql.Field{
-			Type:        gql.String,
-			Description: "User's message",
-		},
-	},
-})
-
-func init() {
-	commentType.AddFieldConfig("author", &gql.Field{
-		Type:        userType,
-		Description: "Author of this comment",
-	})
-}
-
 type CommentMutationResponse struct {
 	Id uint `json:"id"`
-}
-
-func resolvePostComment(p gql.ResolveParams) (interface{}, error) {
-	db := p.Context.Value("Database").(*Database)
-	if db == nil {
-		panic(errors.New("Can't find `Database` in context"))
-	}
-	log.Println("OK")
-	l := p.Args["login"]
-	u, err := SelectUserByLogin(db, l.(string))
-	if err != nil {
-		return nil, fmt.Errorf("can't find user becuse of: %v", err)
-	}
-	text := p.Args["text"]
-	c := Comment{
-		AuthorID: u.ID,
-		Text:     text.(string),
-	}
-	return PostComment(db, &c)
 }
 
 func PostComment(db *Database, c *Comment) (*CommentMutationResponse, error) {
@@ -64,22 +20,6 @@ func PostComment(db *Database, c *Comment) (*CommentMutationResponse, error) {
 	} else {
 		return &CommentMutationResponse{c.ID}, nil
 	}
-}
-
-func resolveDeleteComment(p gql.ResolveParams) (interface{}, error) {
-	db := p.Context.Value("Database").(*Database)
-	if db == nil {
-		panic(errors.New("Can't find `Database` in context"))
-	}
-	idstr, ok := p.Args["id"].(string)
-	if !ok {
-		return nil, FieldNotFoundError("id")
-	}
-	id, err := strconv.ParseUint(idstr, 10, 64)
-	if err != nil {
-		return nil, fmt.Errorf("can't parse `%v` to uint", idstr)
-	}
-	return DeleteComment(db, uint(id))
 }
 
 func DeleteComment(db *Database, id uint) (*CommentMutationResponse, error) {
@@ -91,23 +31,6 @@ func DeleteComment(db *Database, id uint) (*CommentMutationResponse, error) {
 			return &CommentMutationResponse{0}, DBError(err.Error)
 		}
 		return &CommentMutationResponse{id}, nil
-	}
-}
-
-func commentResolverSelect(p gql.ResolveParams) (interface{}, error) {
-	db := p.Context.Value("Database").(*Database)
-	if db == nil {
-		panic(errors.New("Can't find `Database` in context"))
-	}
-	idstr, ok := p.Args["id"]
-	if ok {
-		id, err := strconv.ParseUint(idstr.(string), 10, 64)
-		if err != nil {
-			return nil, fmt.Errorf("Parsing `id` error: %v", err)
-		}
-		return SelectCommentByID(db, uint(id))
-	} else {
-		return nil, FieldNotFoundError("id")
 	}
 }
 
@@ -124,16 +47,4 @@ func LoadCommentsForUser(db *Database, u *User) ([]*Comment, error) {
 		return nil, DBError(err.Error)
 	}
 	return u.Comments, nil
-}
-
-func resolveCommentsForUser(p gql.ResolveParams) (interface{}, error) {
-	db := p.Context.Value("Database").(*Database)
-	if db == nil {
-		panic(errors.New("Can't find `Database` in context"))
-	}
-	if u, ok := p.Source.(*User); !ok {
-		return nil, errors.New("Not a `*User`")
-	} else {
-		return LoadCommentsForUser(db, u)
-	}
 }

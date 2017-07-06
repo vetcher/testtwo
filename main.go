@@ -5,20 +5,20 @@ import (
 	"flag"
 	"log"
 	"net/http"
-
 	"time"
 
 	gql "github.com/graphql-go/graphql"
 	"github.com/graphql-go/handler"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
-	m "github.com/vetcher/testtwo/models"
+	"github.com/vetcher/testtwo/models"
+	r "github.com/vetcher/testtwo/resolvers"
 )
 
 func initHandler() *handler.Handler {
 	schema, err := gql.NewSchema(
 		gql.SchemaConfig{
-			Query:    m.QueryType,
-			Mutation: m.RootMutation,
+			Query:    r.QueryType,
+			Mutation: r.RootMutation,
 		},
 	)
 	if err != nil {
@@ -40,7 +40,7 @@ func contextHandlerFunc(ctx context.Context, h *handler.Handler) http.Handler {
 
 func main() {
 	flag.Usage()
-	db := m.InitDB()
+	db := models.InitDB()
 	h := initHandler()
 	ctx := context.WithValue(context.Background(), "Database", db)
 	defer db.Close()
