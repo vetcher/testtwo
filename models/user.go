@@ -47,7 +47,7 @@ var userType = gql.NewObject(
 )
 
 func userResolverSelect(p gql.ResolveParams) (interface{}, error) {
-	db := p.Context.Value("Database")
+	db := p.Context.Value("Database").(*Database)
 	if db == nil {
 		panic(errors.New("Can't find `Database` in context"))
 	}
@@ -57,7 +57,7 @@ func userResolverSelect(p gql.ResolveParams) (interface{}, error) {
 		if err != nil {
 			return nil, fmt.Errorf("Parsing `id` error: %v", err)
 		}
-		return SelectUserByID(db.(*gorm.DB), uint(id))
+		return SelectUserByID(db, uint(id))
 	} else {
 		return nil, FieldNotFoundError("id")
 	}
@@ -97,20 +97,6 @@ var gqlReturnedID = gql.NewObject(gql.ObjectConfig{
 		},
 	},
 })
-
-/*var RootMutation = gql.NewObject(gql.ObjectConfig{
-	Name: "RootMutation",
-	Fields: gql.Fields{
-		"users": &gql.Field{
-			Type:        UserMutation,
-			Description: "Operations with User",
-		},
-		"comments": &gql.Field{
-			Type:        CommentMutation,
-			Description: "Operations with Comments",
-		},
-	},
-})*/
 
 var RootMutation = gql.NewObject(gql.ObjectConfig{
 	Name: "RootMutation",
@@ -174,7 +160,7 @@ func FieldNotFoundError(field string) error {
 }
 
 func resolverUpdate(p gql.ResolveParams) (interface{}, error) {
-	db := p.Context.Value("Database")
+	db := p.Context.Value("Database").(*Database)
 	if db == nil {
 		panic(errors.New("Can't find `Database` in context"))
 	}
@@ -182,7 +168,7 @@ func resolverUpdate(p gql.ResolveParams) (interface{}, error) {
 	if !ok {
 		return nil, FieldNotFoundError("login")
 	}
-	usr, err := SelectUserByLogin(db.(*gorm.DB), l.(string))
+	usr, err := SelectUserByLogin(db, l.(string))
 	if err != nil {
 		return nil, err
 	}
@@ -197,11 +183,11 @@ func resolverUpdate(p gql.ResolveParams) (interface{}, error) {
 	usr.Password = pass.(string)
 	usr.Banned = ban.(bool)
 
-	return UpdateUser(db.(*gorm.DB), usr)
+	return UpdateUser(db, usr)
 }
 
 func resolverCreate(p gql.ResolveParams) (interface{}, error) {
-	db := p.Context.Value("Database")
+	db := p.Context.Value("Database").(*Database)
 	if db == nil {
 		panic(errors.New("Can't find `Database` in context"))
 	}
@@ -218,21 +204,21 @@ func resolverCreate(p gql.ResolveParams) (interface{}, error) {
 		Password: pass.(string),
 		Banned:   false,
 	}
-	return CreateUser(db.(*gorm.DB), &usr)
+	return CreateUser(db, &usr)
 }
 
-func SelectUserByID(db *gorm.DB, id uint) (*User, error) {
+func SelectUserByID(db *Database, id uint) (*User, error) {
 	var u User
-	if err := db.Where("id = ?", id).First(&u); err.Error != nil {
+	if err := db.db.Where("id = ?", id).First(&u); err.Error != nil {
 		return nil, DBError(err.Error)
 	}
 	return &u, nil
 }
 
-func SelectUserByLogin(db *gorm.DB, login string) (*User, error) {
+func SelectUserByLogin(db *Database, login string) (*User, error) {
 	var u User
 	log.Println(login)
-	if err := db.Where("login = ?", login).First(&u); err.Error != nil {
+	if err := db.db.Where("login = ?", login).First(&u); err.Error != nil {
 		return nil, DBError(err.Error)
 	}
 	return &u, nil
@@ -248,18 +234,18 @@ func (u *User) EncryptPass() {
 	u.Password = hex.EncodeToString(h.Sum(nil))
 }
 
-func CreateUser(db *gorm.DB, u *User) (*UserMutationResponse, error) {
+func CreateUser(db *Database, u *User) (*UserMutationResponse, error) {
 	u.EncryptPass()
-	if err := db.Create(u); err.Error != nil {
+	if err := db.db.Create(u); err.Error != nil {
 		return &UserMutationResponse{0}, DBError(err.Error)
 	} else {
 		return &UserMutationResponse{u.ID}, nil
 	}
 }
 
-func UpdateUser(db *gorm.DB, u *User) (*UserMutationResponse, error) {
+func UpdateUser(db *Database, u *User) (*UserMutationResponse, error) {
 	u.EncryptPass()
-	if err := db.Save(u); err.Error != nil {
+	if err := db.db.Save(u); err.Error != nil {
 		return &UserMutationResponse{0}, DBError(err.Error)
 	} else {
 		return &UserMutationResponse{u.ID}, nil
