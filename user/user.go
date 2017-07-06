@@ -10,8 +10,6 @@ import (
 	"fmt"
 )
 
-var MainDb *gorm.DB
-
 type User struct {
 	gorm.Model
 	Password string `json:"password"`
@@ -41,14 +39,18 @@ var userType = gql.NewObject(
 )
 
 
-func resolverFunc(p gql.ResolveParams) (interface{}, error) {
+func resolverSelect(p gql.ResolveParams) (interface{}, error) {
+	db := p.Context.Value("Database")
+	if db == nil {
+		panic(errors.New("Can't find `Database`"))
+	}
 	idstr, ok := p.Args["id"]
 	if ok {
 		id, err := strconv.ParseUint(idstr.(string), 10, 64)
 		if err != nil {
 			return nil, fmt.Errorf("Parsing `id` error: %v", err)
 		}
-		return SelectUser(uint(id))
+		return SelectUserByID(db.(*gorm.DB), uint(id))
 	}
 	return nil, fmt.Errorf("Field `id` not found")
 }
@@ -64,7 +66,7 @@ var QueryType = gql.NewObject(
 						Type: gql.ID,
 					},
 				},
-				Resolve: resolverFunc,
+				Resolve: resolverSelect,
 			},
 		},
 	},
@@ -117,11 +119,15 @@ func FieldNotFoundError(field string) error {
 }
 
 func resolverUpdate(p gql.ResolveParams) (interface{}, error) {
+	db := p.Context.Value("Database")
+	if db == nil {
+		panic(errors.New("Can't find `Database`"))
+	}
 	l, ok := p.Args["login"]
 	if !ok {
 		return nil, FieldNotFoundError("login")
 	}
-	usr, err := SelectUserByLogin(l.(string))
+	usr, err := SelectUserByLogin(db.(*gorm.DB), l.(string))
 	if err != nil {
 		return nil, err
 	}
@@ -135,10 +141,15 @@ func resolverUpdate(p gql.ResolveParams) (interface{}, error) {
 	}
 	usr.Password = pass.(string)
 	usr.Banned = ban.(bool)
-	return UpdateUser(usr)
+
+	return UpdateUser(db.(*gorm.DB), usr)
 }
 
 func resolverCreate(p gql.ResolveParams) (interface{}, error) {
+	db := p.Context.Value("Database")
+	if db == nil {
+		panic(errors.New("Can't find `Database`"))
+	}
 	l, ok := p.Args["login"]
 	if !ok {
 		return nil, errors.New("I think its panic")
@@ -152,20 +163,20 @@ func resolverCreate(p gql.ResolveParams) (interface{}, error) {
 		Password: pass.(string),
 		Banned: false,
 	}
-	return CreateUser(&usr)
+	return CreateUser(db.(*gorm.DB), &usr)
 }
 
-func SelectUser(id uint) (*User, error) {
+func SelectUserByID(db *gorm.DB, id uint) (*User, error) {
 	var u User
-	if err := MainDb.Where("id = ?", id).First(&u); err.Error != nil {
+	if err := db.Where("id = ?", id).First(&u); err.Error != nil {
 		return nil, fmt.Errorf("Database error: %v", err.Error)
 	}
 	return &u, nil
 }
 
-func SelectUserByLogin(login string) (*User, error) {
+func SelectUserByLogin(db *gorm.DB, login string) (*User, error) {
 	var u User
-	if err := MainDb.Where("login = ?", login).First(&u); err.Error != nil {
+	if err := db.Where("login = ?", login).First(&u); err.Error != nil {
 		return nil, fmt.Errorf("Database error: %v", err.Error)
 	}
 	return &u, nil
@@ -177,18 +188,18 @@ func (u *User) EncryptPass() {
 	u.Password = hex.EncodeToString(h.Sum(nil))
 }
 
-func CreateUser(u *User) (*UserMutationResponse, error) {
+func CreateUser(db *gorm.DB, u *User) (*UserMutationResponse, error) {
 	u.EncryptPass()
-    if err := MainDb.Create(u); err.Error != nil {
+    if err := db.Create(u); err.Error != nil {
 		return &UserMutationResponse{0}, fmt.Errorf("Database error: %v", err.Error)
 	} else {
 		return &UserMutationResponse{u.ID}, nil
 	}
 }
 
-func UpdateUser(u *User) (*UserMutationResponse, error) {
+func UpdateUser(db *gorm.DB, u *User) (*UserMutationResponse, error) {
 	u.EncryptPass()
-	if err := MainDb.Save(u); err.Error != nil {
+	if err := db.Save(u); err.Error != nil {
 		return &UserMutationResponse{0}, fmt.Errorf("Database error: %v", err.Error)
 	} else {
 		return &UserMutationResponse{u.ID}, nil

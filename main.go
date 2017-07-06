@@ -10,7 +10,10 @@ import (
 	u "github.com/vetcher/testtwo/user"
 	"log"
 	"flag"
+	"context"
 )
+
+const POSTGRES string = "postgres"
 
 type DBConfig struct {
 	Host *string
@@ -20,38 +23,38 @@ type DBConfig struct {
 	Port *uint
 }
 
-const POSTGRES string = "postgres"
-
 func parseDBConfig() *DBConfig {
 	conf := DBConfig{
 		User: flag.String("user", POSTGRES, "User"),
 		Password: flag.String("password", POSTGRES, "User's password"),
 		DBName: flag.String("db", POSTGRES, "Name of database"),
 		Port: flag.Uint("port", 5432, "Postgres port"),
-		Host: flag.String("host", POSTGRES, "Address of server"),
+		Host: flag.String("host", "localhost", "Address of server"),
 	}
+	flag.Parse()
 	return &conf
 }
 
-func init() {
+func initDB() *gorm.DB {
 	conf := parseDBConfig()
-	var err error
-	u.MainDb, err = gorm.Open("postgres",
-		fmt.Sprintf("host=%s port=%s user=%s dbname=%s sslmode=disable password=%s",
-			conf.Host,
-			conf.Port,
-			conf.User,
-			conf.DBName,
-			conf.Password,
-		))
+	connectionParams := fmt.Sprintf("host=%v port=%d user=%v dbname=%v sslmode=disable password=%v",
+		*conf.Host,
+		*conf.Port,
+		*conf.User,
+		*conf.DBName,
+		*conf.Password,
+	)
+	db, err := gorm.Open("postgres", connectionParams)
 	if err != nil {
 		panic(err)
 	}
-	u.MainDb.AutoMigrate(&u.User{})
+	log.Println("Connection:", connectionParams)
+	db.AutoMigrate(&u.User{})
+	return db
 }
 
-func main() {
-	mainschema, err := gql.NewSchema(
+func initHandler() *handler.Handler {
+	mainSchema, err := gql.NewSchema(
 		gql.SchemaConfig{
 			Query:    u.QueryType,
 			Mutation: u.UserMutation,
@@ -60,11 +63,25 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	h := handler.New(&handler.Config{
-		Schema: &mainschema,
+
+	return handler.New(&handler.Config{
+		Schema: &mainSchema,
 		Pretty: true,
 	})
-	defer u.MainDb.Close()
-	log.Println("Serve")
-	http.ListenAndServe(":8080", h)
+}
+
+func contextHandlerFunc(ctx context.Context, h *handler.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		h.ContextHandler(ctx, w, r)
+	})
+}
+
+func main() {
+	flag.Usage()
+	db := initDB()
+	h := initHandler()
+	ctx := context.WithValue(context.Background(), "Database", db)
+	defer db.Close()
+	log.Println("Serve" )
+	http.ListenAndServe(":8080", contextHandlerFunc(ctx, h))
 }
