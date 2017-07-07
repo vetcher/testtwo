@@ -48,20 +48,20 @@ func SelectUserByLogin(db *Database, login string) (*User, error) {
 	return &u, nil
 }
 
-func CreateUser(db *Database, u *User) (*UserMutationResponse, error) {
+func CreateUser(db *Database, u *User) (*User, error) {
 	u.EncryptPass()
 	if err := db.db.Create(u); err.Error != nil {
-		return &UserMutationResponse{0}, DBError(err.Error)
+		return nil, DBError(err.Error)
 	} else {
-		return &UserMutationResponse{u.ID}, nil
+		return u, nil
 	}
 }
 
-func UpdateUser(db *Database, u *User) (*UserMutationResponse, error) {
+func UpdateUser(db *Database, u *User) (*User, error) {
 	u.EncryptPass()
 	if err := db.db.Save(u); err.Error != nil {
-		return &UserMutationResponse{0}, DBError(err.Error)
+		return nil, DBError(err.Error)
 	} else {
-		return &UserMutationResponse{u.ID}, nil
+		return u, nil
 	}
 }

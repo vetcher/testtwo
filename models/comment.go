@@ -10,27 +10,24 @@ type Comment struct {
 	AuthorID uint   `gorm:"index" json:"author"`
 }
 
-type CommentMutationResponse struct {
-	Id uint `json:"id"`
-}
-
-func PostComment(db *Database, c *Comment) (*CommentMutationResponse, error) {
+func PostComment(db *Database, c *Comment) (*Comment, error) {
 	if err := db.db.Create(c); err.Error != nil {
-		return &CommentMutationResponse{0}, DBError(err.Error)
+		return nil, DBError(err.Error)
 	} else {
-		return &CommentMutationResponse{c.ID}, nil
+		return c, nil
 	}
 }
 
-func DeleteComment(db *Database, id uint) (*CommentMutationResponse, error) {
+// не понятно, что возвращать после Delete
+func DeleteComment(db *Database, id uint) (bool, error) {
 	var temp Comment
 	if err := db.db.Where("id = ?", id).First(&temp); err.Error != nil {
-		return &CommentMutationResponse{0}, DBError(err.Error)
+		return false, DBError(err.Error)
 	} else {
 		if err := db.db.Delete(temp); err.Error != nil {
-			return &CommentMutationResponse{0}, DBError(err.Error)
+			return false, DBError(err.Error)
 		}
-		return &CommentMutationResponse{id}, nil
+		return true, nil
 	}
 }
 

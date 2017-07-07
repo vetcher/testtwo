@@ -4,31 +4,35 @@ import (
 	"fmt"
 
 	gql "github.com/graphql-go/graphql"
+	"github.com/mitchellh/mapstructure"
+	v "gopkg.in/go-playground/validator.v9"
 )
+
+var validator *v.Validate = v.New()
 
 var RootMutation = gql.NewObject(gql.ObjectConfig{
 	Name: "RootMutation",
 	Fields: gql.Fields{
 		"createUser": &gql.Field{
-			Type: gqlReturnedID,
+			Type: userType,
 			Args: gql.FieldConfigArgument{
 				"login": &gql.ArgumentConfig{
-					Type: gql.String,
+					Type: gql.NewNonNull(gql.String),
 				},
 				"password": &gql.ArgumentConfig{
-					Type: gql.String,
+					Type: gql.NewNonNull(gql.String),
 				},
 			},
 			Resolve: resolverCreate,
 		},
 		"updateUser": &gql.Field{
-			Type: gqlReturnedID,
+			Type: userType,
 			Args: gql.FieldConfigArgument{
 				"login": &gql.ArgumentConfig{
-					Type: gql.String,
+					Type: gql.NewNonNull(gql.String),
 				},
 				"password": &gql.ArgumentConfig{
-					Type: gql.String,
+					Type: gql.NewNonNull(gql.String),
 				},
 				"banned": &gql.ArgumentConfig{
 					Type: gql.Boolean,
@@ -37,24 +41,24 @@ var RootMutation = gql.NewObject(gql.ObjectConfig{
 			Resolve: resolverUpdate,
 		},
 		"postComment": &gql.Field{
-			Type: gqlReturnedID,
+			Type: commentType,
 			Args: gql.FieldConfigArgument{
 				"text": &gql.ArgumentConfig{
-					Type:        gql.String,
+					Type:        gql.NewNonNull(gql.String),
 					Description: "Message",
 				},
 				"login": &gql.ArgumentConfig{
-					Type:        gql.String,
+					Type:        gql.NewNonNull(gql.String),
 					Description: "Nickname (login) of author",
 				},
 			},
 			Resolve: resolvePostComment,
 		},
 		"deleteComment": &gql.Field{
-			Type: gqlReturnedID,
+			Type: gql.Boolean,
 			Args: gql.FieldConfigArgument{
 				"id": &gql.ArgumentConfig{
-					Type:        gql.ID,
+					Type:        gql.NewNonNull(gql.ID),
 					Description: "ID of message, which should be deleted",
 				},
 			},
@@ -63,6 +67,15 @@ var RootMutation = gql.NewObject(gql.ObjectConfig{
 	},
 })
 
-func FieldNotFoundError(field string) error {
-	return fmt.Errorf("Field `%v` not found empty", field)
+// Decode from input to output and validate output
+func DecodeAndValidate(input, output interface{}) error {
+	err := mapstructure.WeakDecode(input, output)
+	if err != nil {
+		return fmt.Errorf("can't decode input: %v", err)
+	}
+	err = validator.Struct(output)
+	if err != nil {
+		return fmt.Errorf("validation falled: %v", err)
+	}
+	return nil
 }

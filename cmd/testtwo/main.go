@@ -32,9 +32,9 @@ func initHandler() *handler.Handler {
 
 func contextHandlerFunc(ctx context.Context, h *handler.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		now := time.Now()
+		begin := time.Now()
 		h.ContextHandler(ctx, w, r)
-		log.Println(r.URL.Path, time.Now().Sub(now))
+		defer log.Println(r.URL.Path, time.Since(begin))
 	})
 }
 
