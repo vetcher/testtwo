@@ -3,7 +3,6 @@ package models
 import (
 	"crypto/sha1"
 	"encoding/hex"
-	"fmt"
 	"log"
 
 	"github.com/jinzhu/gorm"
@@ -11,18 +10,14 @@ import (
 
 type User struct {
 	gorm.Model
-	Password string     `json:"password"`
-	Login    string     `json:"login" gorm:"unique_index"`
-	Banned   bool       `json:"banned"`
-	Comments []*Comment `json:"comments" gorm:"ForeignKey:AuthorID"`
+	Password string `json:"password"`
+	Login    string `json:"login" gorm:"unique_index"`
+	Banned   bool   `json:"banned"`
+	//Comments []*Comment `json:"comments" gorm:"ForeignKey:AuthorID"`
 }
 
 type UserMutationResponse struct {
 	Id uint `json:"id"`
-}
-
-func DBError(err error) error {
-	return fmt.Errorf("Database error: %v", err)
 }
 
 func (u *User) EncryptPass() {

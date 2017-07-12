@@ -2,16 +2,21 @@ package main
 
 import (
 	"context"
-	"flag"
 	"log"
 	"net/http"
 	"time"
 
+	"flag"
+
+	"fmt"
+
 	gql "github.com/graphql-go/graphql"
 	"github.com/graphql-go/handler"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
+	"github.com/vetcher/comments-msv/client"
 	"github.com/vetcher/testtwo/models"
 	r "github.com/vetcher/testtwo/resolvers"
+	"google.golang.org/grpc"
 )
 
 func initHandler() *handler.Handler {
@@ -38,11 +43,36 @@ func contextHandlerFunc(ctx context.Context, h *handler.Handler) http.Handler {
 	})
 }
 
+type CommentSVCConfig struct {
+	Host *string
+	Port *uint
+}
+
+func NewCommentSVCConfig() *CommentSVCConfig {
+	return &CommentSVCConfig{
+		Port: flag.Uint("commentport", 10000, "CommentSVC port"),
+		Host: flag.String("commenthost", "localhost", "Address of CommentSVC server"),
+	}
+}
+
+func GlobalParse() (*models.DBConfig, *CommentSVCConfig) {
+	db := models.NewDBConfig()
+	comment := NewCommentSVCConfig()
+	flag.Parse()
+	return db, comment
+}
+
 func main() {
-	flag.Usage()
-	db := models.InitDB()
+	DBconf, ComSVCconf := GlobalParse()
+	db := models.InitDB(DBconf)
+	conn, err := grpc.Dial(fmt.Sprintf("%v:%v", *ComSVCconf.Host, *ComSVCconf.Port), grpc.WithInsecure())
+	if err != nil {
+		log.Fatal(err)
+	}
+	commentSVC := client.NewClient(conn)
 	h := initHandler()
 	ctx := context.WithValue(context.Background(), "Database", db)
+	ctx = context.WithValue(ctx, "CommentService", commentSVC)
 	defer db.Close()
 	log.Println("Serve")
 	http.ListenAndServe(":8080", contextHandlerFunc(ctx, h))

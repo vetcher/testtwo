@@ -32,3 +32,15 @@
 [[constraint]]
   name = "github.com/jinzhu/gorm"
   version = "1.0.0"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/mitchellh/mapstructure"
+
+[[constraint]]
+  name = "google.golang.org/grpc"
+  version = "1.4.2"
+
+[[constraint]]
+  name = "gopkg.in/go-playground/validator.v9"
+  version = "9.4.0"

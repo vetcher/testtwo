@@ -2,6 +2,42 @@
 
 
 [[projects]]
+  name = "github.com/go-kit/kit"
+  packages = ["endpoint","log","transport/grpc"]
+  revision = "a9ca6725cbbea455e61c6bc8a1ed28e81eb3493b"
+  version = "v0.5.0"
+
+[[projects]]
+  name = "github.com/go-logfmt/logfmt"
+  packages = ["."]
+  revision = "390ab7935ee28ec6b286364bba9b4dd6410cb3d5"
+  version = "v0.3.0"
+
+[[projects]]
+  name = "github.com/go-playground/locales"
+  packages = [".","currency"]
+  revision = "b860c92274dfb72f517b8b4c11c6d9f2f8cc9d91"
+  version = "v0.11.1"
+
+[[projects]]
+  name = "github.com/go-playground/universal-translator"
+  packages = ["."]
+  revision = "b32fa301c9fe55953584134cb6853a13c87ec0a1"
+  version = "v0.16.0"
+
+[[projects]]
+  name = "github.com/go-stack/stack"
+  packages = ["."]
+  revision = "54be5f394ed2c3e19dac9134a40a95ba5a017f7b"
+  version = "v1.5.4"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/golang/protobuf"
+  packages = ["proto","ptypes/any"]
+  revision = "0a4f71a498b7c4812f64969510bcb4eca251e33a"
+
+[[projects]]
   name = "github.com/graphql-go/graphql"
   packages = [".","gqlerrors","language/ast","language/kinds","language/lexer","language/location","language/parser","language/printer","language/source","language/typeInfo","language/visitor"]
   revision = "e13376c2344b5694a62b7cf6cd8b543c813cd5ee"
@@ -27,19 +63,61 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/kr/logfmt"
+  packages = ["."]
+  revision = "b84e30acd515aadc4b783ad4ff83aff3299bdfe0"
+
+[[projects]]
+  branch = "master"
   name = "github.com/lib/pq"
   packages = [".","hstore","oid"]
-  revision = "8837942c3e09574accbc5f150e2c5e057189cace"
+  revision = "dd1fe2071026ce53f36a39112e645b4d4f5793a4"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/mitchellh/mapstructure"
+  packages = ["."]
+  revision = "d0303fe809921458f417bcf828397a65db30a7e4"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/vetcher/comments-msv"
+  packages = ["client","models","service","service/pb"]
+  revision = "5b5626b518970ded1896dc698b4c5f457f6f7e83"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/net"
-  packages = ["context"]
-  revision = "054b33e6527139ad5b1ec2f6232c3b175bd9a30c"
+  packages = ["context","http2","http2/hpack","idna","internal/timeseries","lex/httplex","trace"]
+  revision = "f01ecb60fe3835d80d9a0b7b2bf24b228c89260e"
+
+[[projects]]
+  branch = "master"
+  name = "golang.org/x/text"
+  packages = ["internal/gen","internal/triegen","internal/ucd","secure/bidirule","transform","unicode/bidi","unicode/cldr","unicode/norm","unicode/rangetable"]
+  revision = "cfdf022e86b4ecfb646e1efbd7db175dd623a8fa"
+
+[[projects]]
+  branch = "master"
+  name = "google.golang.org/genproto"
+  packages = ["googleapis/rpc/status"]
+  revision = "b0a3dcfcd1a9bd48e63634bd8802960804cf8315"
+
+[[projects]]
+  name = "google.golang.org/grpc"
+  packages = [".","codes","credentials","grpclb/grpc_lb_v1","grpclog","internal","keepalive","metadata","naming","peer","stats","status","tap","transport"]
+  revision = "b15215fb911b24a5d61d57feec4233d610530464"
+  version = "v1.4.2"
+
+[[projects]]
+  name = "gopkg.in/go-playground/validator.v9"
+  packages = ["."]
+  revision = "fb68f39656d7ebf8aa339ad4917aa0c260ecc237"
+  version = "v9.4.0"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "d35d5f0155b9214606e900e8bcfa257e6c12f66f2b519f3a106e1eea7b0bd727"
+  inputs-digest = "db3ff02d707d1034226c5897c79c56cf43ebdcf2231eeb6113e8bb38eaab7230"
   solver-name = "gps-cdcl"
   solver-version = 1
