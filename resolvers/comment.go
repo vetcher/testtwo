@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	gql "github.com/graphql-go/graphql"
+	commentsvc "github.com/vetcher/comments-msv/models"
 	"github.com/vetcher/comments-msv/service"
 	"github.com/vetcher/testtwo/models"
 )
@@ -24,6 +25,11 @@ func init() {
 	commentType.AddFieldConfig("author", &gql.Field{
 		Type:        userType,
 		Description: "Author of this comment",
+		Resolve: func(p gql.ResolveParams) (interface{}, error) {
+			comment := p.Source.(*commentsvc.Comment)
+			db := p.Context.Value("Database").(*models.Database)
+			return models.SelectUserByID(db, comment.AuthorID)
+		},
 	})
 }
 
