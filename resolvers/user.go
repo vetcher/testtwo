@@ -28,33 +28,7 @@ var userType = gql.NewObject(
 	},
 )
 
-var QueryType = gql.NewObject(
-	gql.ObjectConfig{
-		Name: "Query",
-		Fields: gql.Fields{
-			"user": &gql.Field{
-				Type: userType,
-				Args: gql.FieldConfigArgument{
-					"id": &gql.ArgumentConfig{
-						Type: gql.ID,
-					},
-				},
-				Resolve: userResolverSelect,
-			},
-			"comment": &gql.Field{
-				Type: commentType,
-				Args: gql.FieldConfigArgument{
-					"id": &gql.ArgumentConfig{
-						Type: gql.ID,
-					},
-				},
-				Resolve: commentResolverSelect,
-			},
-		},
-	},
-)
-
-func userResolverSelect(p gql.ResolveParams) (interface{}, error) {
+func resolveGetUser(p gql.ResolveParams) (interface{}, error) {
 	var id OnlyID
 	err := DecodeAndValidate(p.Args, &id)
 	if err != nil {
@@ -64,7 +38,7 @@ func userResolverSelect(p gql.ResolveParams) (interface{}, error) {
 	return models.SelectUserByID(db, id.ID)
 }
 
-func resolverUpdate(p gql.ResolveParams) (interface{}, error) {
+func resolveUpdateUser(p gql.ResolveParams) (interface{}, error) {
 	var u User
 	err := DecodeAndValidate(p.Args, &u)
 	if err != nil {
@@ -76,12 +50,12 @@ func resolverUpdate(p gql.ResolveParams) (interface{}, error) {
 		return nil, fmt.Errorf("can't find `User` by login: %v", err)
 	}
 	usr.Password = u.Password
-	usr.Banned = u.Banned
+	usr.IsBanned = u.IsBanned
 
 	return models.UpdateUser(db, usr)
 }
 
-func resolverCreate(p gql.ResolveParams) (interface{}, error) {
+func resolveCreateUser(p gql.ResolveParams) (interface{}, error) {
 	var u User
 	err := DecodeAndValidate(p.Args, &u)
 	if err != nil {
@@ -90,7 +64,7 @@ func resolverCreate(p gql.ResolveParams) (interface{}, error) {
 	usr := models.User{
 		Login:    u.Login,
 		Password: u.Password,
-		Banned:   u.Banned,
+		IsBanned: u.IsBanned,
 	}
 	db := p.Context.Value("Database").(*models.Database)
 	return models.CreateUser(db, &usr)

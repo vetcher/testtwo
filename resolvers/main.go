@@ -23,7 +23,7 @@ var RootMutation = gql.NewObject(gql.ObjectConfig{
 					Type: gql.NewNonNull(gql.String),
 				},
 			},
-			Resolve: resolverCreate,
+			Resolve: resolveCreateUser,
 		},
 		"updateUser": &gql.Field{
 			Type: userType,
@@ -38,7 +38,7 @@ var RootMutation = gql.NewObject(gql.ObjectConfig{
 					Type: gql.Boolean,
 				},
 			},
-			Resolve: resolverUpdate,
+			Resolve: resolveUpdateUser,
 		},
 		"postComment": &gql.Field{
 			Type: commentType,
@@ -66,6 +66,32 @@ var RootMutation = gql.NewObject(gql.ObjectConfig{
 		},
 	},
 })
+
+var QueryType = gql.NewObject(
+	gql.ObjectConfig{
+		Name: "Query",
+		Fields: gql.Fields{
+			"user": &gql.Field{
+				Type: userType,
+				Args: gql.FieldConfigArgument{
+					"id": &gql.ArgumentConfig{
+						Type: gql.ID,
+					},
+				},
+				Resolve: resolveGetUser,
+			},
+			"comment": &gql.Field{
+				Type: commentType,
+				Args: gql.FieldConfigArgument{
+					"id": &gql.ArgumentConfig{
+						Type: gql.ID,
+					},
+				},
+				Resolve: resolveGetComment,
+			},
+		},
+	},
+)
 
 // Decode from input to output and validate output
 func DecodeAndValidate(input, output interface{}) error {

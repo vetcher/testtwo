@@ -51,7 +51,6 @@ func InitDB(conf *DBConfig) *Database {
 	}
 	log.Println("Connection:", connectionParams)
 	db.db.AutoMigrate(&User{})
-	//	db.db.AutoMigrate(&Comment{})
 	return &db
 }
 

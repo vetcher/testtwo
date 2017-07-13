@@ -5,12 +5,12 @@ type OnlyID struct {
 }
 
 type Comment struct {
-	Text  string `validate:"required,omitempty"`
+	Text  string `validate:"required"`
 	Login string `validate:"required"`
 }
 
 type User struct {
 	Login    string `validate:"required"`
 	Password string `validate:"required"`
-	Banned   bool
+	IsBanned bool
 }

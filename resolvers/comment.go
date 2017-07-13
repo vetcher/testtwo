@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 
+	"time"
+
 	gql "github.com/graphql-go/graphql"
 	commentsvc "github.com/vetcher/comments-msv/models"
 	"github.com/vetcher/comments-msv/service"
@@ -14,10 +16,19 @@ var commentType = gql.NewObject(gql.ObjectConfig{
 	Name:        "Comment",
 	Description: "User's comment",
 	Fields: gql.Fields{
-		"text": &gql.Field{
+		"Text": &gql.Field{
 			Type:        gql.String,
 			Description: "User's message",
 		},
+		"created_at": &gql.Field{
+			Type:        gql.String,
+			Name:        "CreatedAt",
+			Description: "Server-side time when comment was created (posted)",
+			Resolve: func(p gql.ResolveParams) (interface{}, error) {
+				return p.Source.(*commentsvc.Comment).CreatedAt.Format(time.Stamp), nil
+			},
+		},
+		// more fields adds in runtime, please check `init()`
 	},
 })
 
@@ -56,13 +67,14 @@ func resolveDeleteComment(p gql.ResolveParams) (interface{}, error) {
 	return client.DeleteCommentByID(id.ID)
 }
 
-func commentResolverSelect(p gql.ResolveParams) (interface{}, error) {
+func resolveGetComment(p gql.ResolveParams) (interface{}, error) {
 	var id OnlyID
 	if err := DecodeAndValidate(p.Args, &id); err != nil {
 		return nil, err
 	}
 	client := p.Context.Value("CommentService").(service.CommentService)
-	return client.GetCommentByID(id.ID)
+	comment, err := client.GetCommentByID(id.ID)
+	return comment, err
 }
 
 func resolveCommentsForUser(p gql.ResolveParams) (interface{}, error) {

@@ -12,7 +12,7 @@ type User struct {
 	gorm.Model
 	Password string `json:"password"`
 	Login    string `json:"login" gorm:"unique_index"`
-	Banned   bool   `json:"banned"`
+	IsBanned bool   `json:"banned"`
 	//Comments []*Comment `json:"comments" gorm:"ForeignKey:AuthorID"`
 }
 

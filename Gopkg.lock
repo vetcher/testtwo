@@ -82,8 +82,8 @@
 [[projects]]
   branch = "master"
   name = "github.com/vetcher/comments-msv"
-  packages = ["client","models","service","service/pb"]
-  revision = "5b5626b518970ded1896dc698b4c5f457f6f7e83"
+  packages = ["models","service","service/pb","transport","util"]
+  revision = "17a503a2d74a858357f5ae33d058b84f68713d42"
 
 [[projects]]
   branch = "master"
@@ -118,6 +118,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "db3ff02d707d1034226c5897c79c56cf43ebdcf2231eeb6113e8bb38eaab7230"
+  inputs-digest = "25063c2c813eabbcf9b1ed3420934538b6da20db4700436b01b428309b2c2d9e"
   solver-name = "gps-cdcl"
   solver-version = 1
