@@ -12,7 +12,7 @@ type User struct {
 	gorm.Model
 	Password string `json:"password"`
 	Login    string `json:"login" gorm:"unique_index"`
-	IsBanned bool   `json:"banned"`
+	IsBanned bool   `json:"is_banned"`
 }
 
 type UserMutationResponse struct {
