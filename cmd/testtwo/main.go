@@ -43,13 +43,13 @@ func contextHandlerFunc(ctx context.Context, h *handler.Handler) http.Handler {
 	})
 }
 
-type CommentsvcConfig struct {
+type CommentSvcConfig struct {
 	Host *string
 	Port *uint
 }
 
-func NewCommentSVCConfig() *CommentsvcConfig {
-	return &CommentsvcConfig{
+func NewCommentSvcConfig() *CommentSvcConfig {
+	return &CommentSvcConfig{
 		Port: flag.Uint("commentport", 10000, "CommentSVC port"),
 		Host: flag.String("commenthost", "localhost", "Address of CommentSVC server"),
 	}
@@ -57,17 +57,17 @@ func NewCommentSVCConfig() *CommentsvcConfig {
 
 func main() {
 	DBConf := models.NewDBConfig()
-	CommentsvcConf := NewCommentSVCConfig()
+	commentSvcConf := NewCommentSvcConfig()
 	flag.Parse()
 	db := models.InitDB(DBConf)
-	conn, err := grpc.Dial(fmt.Sprintf("%v:%v", *CommentsvcConf.Host, *CommentsvcConf.Port), grpc.WithInsecure())
+	conn, err := grpc.Dial(fmt.Sprintf("%v:%v", *commentSvcConf.Host, *commentSvcConf.Port), grpc.WithInsecure())
 	if err != nil {
 		log.Fatal(err)
 	}
-	commentSVC := client.NewClient(conn)
+	commentSvc := client.NewClient(conn)
 	h := initHandler()
 	ctx := context.WithValue(context.Background(), "Database", db)
-	ctx = context.WithValue(ctx, "CommentService", commentSVC)
+	ctx = context.WithValue(ctx, "CommentService", commentSvc)
 	defer db.Close()
 	log.Println("Serve :8080")
 	http.ListenAndServe(":8080", contextHandlerFunc(ctx, h))

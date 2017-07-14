@@ -13,7 +13,6 @@ type User struct {
 	Password string `json:"password"`
 	Login    string `json:"login" gorm:"unique_index"`
 	IsBanned bool   `json:"banned"`
-	//Comments []*Comment `json:"comments" gorm:"ForeignKey:AuthorID"`
 }
 
 type UserMutationResponse struct {

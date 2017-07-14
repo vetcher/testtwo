@@ -83,7 +83,7 @@
   branch = "master"
   name = "github.com/vetcher/comments-msv"
   packages = ["models","service","service/pb","transport","util"]
-  revision = "17a503a2d74a858357f5ae33d058b84f68713d42"
+  revision = "0179487b0136bcbf47b7e5f0ccb37c4707029f69"
 
 [[projects]]
   branch = "master"
@@ -95,7 +95,7 @@
   branch = "master"
   name = "golang.org/x/text"
   packages = ["internal/gen","internal/triegen","internal/ucd","secure/bidirule","transform","unicode/bidi","unicode/cldr","unicode/norm","unicode/rangetable"]
-  revision = "cfdf022e86b4ecfb646e1efbd7db175dd623a8fa"
+  revision = "836efe42bb4aa16aaa17b9c155d8813d336ed720"
 
 [[projects]]
   branch = "master"
